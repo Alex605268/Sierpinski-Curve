@@ -16,17 +16,21 @@ def s_curve(levels, shape):
     newShape2 = [mid01, shape[1], mid12]
     newShape3 = [mid20, mid12, shape[2]]
     
+    #recursively generate smaller s_curves
     subCurve1 = s_curve(levels - 1, newShape1)
     subCurve2 = s_curve(levels - 1, newShape2)
     subCurve3 = s_curve(levels - 1, newShape3)
     
     
     #ai provided this line - I couldn't work out why random extra lines were being generated
-    #it turns out that
-    # nan = torch.tensor([[float('nan'), float('nan')]])
-    # newShape = [subCurve1, nan, subCurve2, nan, subCurve3]
+    #it turns out that the final point of the final smaller triangle was being concatenated to
+    #the starting point of the first larger triangles because of the recursive call.This resulted
+    # in some lines being doubly drawn, as well as a few extra lines that shouldn't appear
+    # matplotlib considers NaN a discontinuity so by adding it between each triangle it prevents the extra lines being drawn.
+    nan = torch.tensor([[float('nan'), float('nan')]])
+    newShape = [subCurve1, nan, subCurve2, nan, subCurve3]
     
-    newShape = [subCurve1, subCurve2, subCurve3]
+    # newShape = [subCurve1, subCurve2, subCurve3]
     
     return torch.cat(newShape, dim=0)
 
@@ -39,6 +43,9 @@ myShape = [point0, point1, point2]
 lvl = 2
 
 curve = s_curve(lvl, myShape)
+
+torch.set_printoptions(threshold=10000)
+print(curve)
 
 plt.plot(curve[:, 0], curve[:, 1], color='blue', linewidth=0.5)
 plt.axis('equal')
