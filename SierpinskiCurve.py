@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import matplotlib.pyplot as plt
 
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 def s_curve(levels, shape):
     
@@ -39,42 +40,16 @@ point0 = torch.tensor([0.0, 0.0])
 point1 = torch.tensor([1.0, 0.0])
 point2 = torch.tensor([0.5, 0.866])
 
+point0 = point0.to(device)
+point1 = point1.to(device)
+point2 = point2.to(device)
+
 myShape = [point0, point1, point2]
-lvl = 2
+lvl = 12
 
 curve = s_curve(lvl, myShape)
-
-torch.set_printoptions(threshold=10000)
-print(curve)
 
 plt.plot(curve[:, 0], curve[:, 1], color='blue', linewidth=0.5)
 plt.axis('equal')
 plt.axis('off')
-plt.title("Sierpinski Curve (PyTorch)")
 plt.show()
-    
-        
-        
-    
-        
-        
-
-
-
-
-# fig = plt.figure(figsize=(16,10))
-# def processFractal(a):
-#     """Display an array of iteration counts as a
-#         colorful picture of a fractal."""
-#     a_cyclic = (6.28*a/20.0).reshape(list(a.shape)+[1])
-#     img = np.concatenate([10+20*np.cos(a_cyclic),
-#     30+50*np.sin(a_cyclic),
-#     155-80*np.cos(a_cyclic)], 2)
-#     img[a==a.max()] = 0
-#     a = img
-#     a = np.uint8(np.clip(a, 0, 255))
-#     return a
-
-# plt.imshow(processFractal(ns.cpu().numpy()))
-# plt.tight_layout(pad=0)
-# plt.show()
