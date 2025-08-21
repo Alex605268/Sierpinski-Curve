@@ -4,15 +4,19 @@ import matplotlib.pyplot as plt
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+#
+
 def s_curve(levels, shape):
     
     if levels == 0:
         return torch.stack(shape + [shape[0]])
     
+    #finds the midpoints of each line in the shape
     mid01 = (shape[0] + shape[1]) / 2
     mid12 = (shape[1] + shape[2]) / 2
     mid20 = (shape[2] + shape[0]) / 2
     
+    #creats 3 smaller shapes based on the midpoints of the bigger shape
     newShape1 = [shape[0], mid01, mid20]
     newShape2 = [mid01, shape[1], mid12]
     newShape3 = [mid20, mid12, shape[2]]
@@ -45,7 +49,7 @@ point1 = point1.to(device)
 point2 = point2.to(device)
 
 myShape = [point0, point1, point2]
-lvl = 12
+lvl = 8
 
 curve = s_curve(lvl, myShape)
 

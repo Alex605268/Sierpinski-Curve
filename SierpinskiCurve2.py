@@ -4,87 +4,63 @@ import matplotlib.pyplot as plt
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-def s_curve(levels, shape):
-    
+#this generates a sierpinski curve 
+
+def s_curve(levels, path):
+    # base case
     if levels == 0:
-        return torch.cat([shape, shape[0:1]])
+        return path
     
-    #designates the midpoint of each line
-    mid01 = (shape[0] + shape[1]) / 2
-    mid12 = (shape[1] + shape[2]) / 2
-    mid20 = (shape[2] + shape[0]) / 2
+    #extract the 3 vertices of the triangle
+    v1 = path[0]
+    v2 = path[1]
+    v3 = path[2]
     
+    #each shift scales down the triangle by 50%, anchored at a different vertex
+    #so we end up with 3 new triangular paths, half the size, each anchored at a different vertex
+    shifts  = [
+        lambda z: v1 + (z-v1) * 0.5,
+        lambda z: v2 + (z-v2) * 0.5,
+        lambda z: v3 + (z-v3) * 0.5
+    ]
     
-    #creates 3 sub-triangles
-    newShape1 = torch.stack([shape[0], mid01, mid20])
-    newShape2 = torch.stack([mid01, shape[1], mid12])
-    newShape3 = torch.stack([mid20, mid12, shape[2]])
-    
-    #recursively generate smaller s_curves
-    subCurve1 = s_curve(levels - 1, newShape1)
-    subCurve2 = s_curve(levels - 1, newShape2)
-    subCurve3 = s_curve(levels - 1, newShape3)
-    
-    
-    # ai provided this line - I couldn't work out why random extra lines were being generated
-    # it turns out that the final point of the final smaller triangle was being concatenated to
-    # the starting point of the first larger triangles because of the recursive call.This resulted
-    # in some lines being doubly drawn, as well as a few extra lines that shouldn't appear
-    # matplotlib considers NaN a discontinuity so by adding it between each triangle it 
-    # prevents the extra lines being drawn.
-    nan = torch.tensor([float('nan') + float('nan')*1j])
-    newShape = [subCurve1, nan, subCurve2, nan, subCurve3]
-    return torch.cat(newShape, dim=0)
+    #recursive case
+    sub_paths = []
+    for shift in shifts:
+        #essentially this just keeps doing the shift operations on smaller and smaller triangles
+        #until it reaches the base case (where levels == 0) then appends them all together.
+        sub_path = s_curve(levels-1, shift(path))
+        print(f"Appending at level {levels}")
+        sub_paths.append(sub_path)
+        
+        #ai gave me this part - it was attaching a few extra lines that I
+        #didn't want it to, and couldn't work how to fix it. this adds a "stop" at the end of each
+        #small triangle so that matplotlib doesn't try and attach it to a bigger triangle
+        sub_paths.append(torch.tensor([float('nan') + float('nan')*1j]))
+        
+    return torch.cat(sub_paths)
 
-#the three outside points of the triangle - can pick any coordinates you want. current coordinates
-#are for an equilateral triangle with side length 1
-point0 = [0.0, 0.0]
-point1 = [1.0, 0.0]
-point2 = [0.5, 0.866]
+#the three point of the triangle path (currently it's an equilateral triangle)
+#function should be able to handle any points.
+point0 = torch.tensor([0.0, 0.0])
+point1 = torch.tensor([1.0, 0.0])
+point2 = torch.tensor([0.5, 0.866])
 
-#converting the points to the complex plane
-x = torch.tensor([point0[0], point1[0], point2[0]])
-y = torch.tensor([point0[1], point1[1], point2[1]])
-z = torch.complex(x, y)
+#creates the triangle path (stack puts those 3 tensors on top of each other in a new dimension, so
+# 3 1*2 matrices becomes a 3*2 matrix)
+path = torch.stack([point0, point1, point2, point0])
 
+# converting the points to the complex plane
+z = torch.complex(path[:, 0], path[:, 1])
 z = z.to(device)
 
-myShape = z
-lvl = 7
+myPath = z
+lvl = 3
 
-curve = s_curve(lvl, myShape)
-
-
-#mobius transfomation function
-#I just googled interesting complex transformations and found the formula for mobius transformations
-#can't have ad-bc = 0
-#can stretch/bend/invert the triangle but preserves the angles
-#Not entirely sure what each variable does, just found it interesting
-def mobius(z, a, b, c, d):
-    return (a*z + b) / (c*z + d)
-
-a = 1 + 0.5j
-b = -0.3 + 0.2j
-c = 0.6 - 0.4j
-d = 1 - 0.1j
+curve = s_curve(lvl, myPath)
 
 
-transformed = mobius(curve, a, b, c, d) 
-
-
-# for plotting a single curve
-
-# plt.plot(curve.real.cpu(), curve.imag.cpu(), color='blue', linewidth=0.5)
-# plt.axis('equal')
-# plt.axis('off')
-# plt.show()
-
-# optional for standard and transformation side by side
-
-fig, (ax1, ax2) = plt.subplots(1, 2)
-
-ax1.plot(curve.real.cpu(), curve.imag.cpu(), color='blue', linewidth=0.5)
-ax2.plot(transformed.imag.cpu(), transformed.real.cpu(), color='blue', linewidth=0.5)
-plt.tight_layout()
+plt.plot(curve.real.cpu().numpy(), curve.imag.cpu().numpy(), color='blue', linewidth=0.5)
+plt.axis('equal')
+plt.axis('off')
 plt.show()
-
